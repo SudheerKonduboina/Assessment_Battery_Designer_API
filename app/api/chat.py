@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from ..core.agent import Agent
-from ..models import ChatResponse, RecommendationItem
+from app.models import build_chat_response, ChatResponse
 
 router = APIRouter()
 
@@ -42,19 +42,9 @@ async def chat(request: ChatRequest):
     reply, recs, end_conv = agent.handle_chat(msg_dicts, turn_count, last_reply_was_recs)
 
     # 4. Strict Schema Compliance (Section 5)
-    safe_recs = [
-        RecommendationItem(
-            name=r["name"],
-            url=r.get("url") or r.get("link", ""),
-            test_type=r.get("test_type", "K")
-        )
-        for r in (recs or [])
-    ]
-
-    response = ChatResponse(
-        reply=reply,
-        recommendations=safe_recs,
-        end_of_conversation=end_conv
-    )
-
-    return response.model_dump()
+    result = {
+        "reply": reply,
+        "recommendations": recs or [],
+        "end_of_conversation": end_conv
+    }
+    return build_chat_response(result)
