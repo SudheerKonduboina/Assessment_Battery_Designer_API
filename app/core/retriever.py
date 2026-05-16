@@ -20,8 +20,6 @@ import re
 import inspect
 import subprocess
 from typing import List, Dict, Any, Set
-from .dense_retriever import DenseRetriever
-
 # Enterprise LLM Routing Configuration
 OLLAMA_MODEL = "llama3"
 FALLBACK_MODEL = "phi3"
@@ -70,7 +68,6 @@ class Retriever:
         self.catalog_path = catalog_path
         self.raw_catalog: List[Dict[str, Any]] = []
         self._load_catalog()
-        self.dense_retriever = DenseRetriever(self.raw_catalog)
         self._category_index = self._build_category_index()
 
     def _load_catalog(self):
@@ -347,7 +344,7 @@ class Retriever:
 
         # 5. Stratified Retrieval
         sparse_pool = self._sparse_retrieve(query, k=sparse_k)
-        dense_pool = self.dense_retriever.search(query, k=dense_k)
+        dense_pool = []
         covered_ids = {str(c.get("entity_id", "")) for c in sparse_pool + dense_pool}
         explore_pool = self._diversity_sample(covered_ids, k=explore_k)
 
