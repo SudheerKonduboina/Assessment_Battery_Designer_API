@@ -1,55 +1,83 @@
 # SHL Conversational Assessment Recommender — Approach Document
 
----
-
 ## What I Built and Why
 
-The system is a production-hardened, stateless FastAPI service that guides hiring managers from vague role descriptions to a diverse shortlist of SHL assessments. Every request carries the full conversation history, ensuring deterministic evaluation and simple horizontal scalability.
+The system is a production-hardened FastAPI service that helps hiring managers convert role descriptions into a structured shortlist of relevant SHL assessments. It is stateless, scalable, and designed for fast inference in cloud environments.
 
-I transitioned from a basic heuristic engine to a **TF-IDF Hybrid Retrieval Pipeline**. The core reasoning uses a `TfidfVectorizer` from `scikit-learn` for sparse semantic similarity matching, augmented by a custom keyword-and-role scoring layer. This architecture provides the "best of both worlds": the vocabulary flexibility to understand intent and the ultra-lightweight memory footprint required for cloud deployment.
+I transitioned from a heavier semantic embedding approach to a lightweight TF-IDF based retrieval system using scikit-learn. This change was made to ensure stability and low memory usage on constrained deployments like Render.
 
-The stack uses **FastAPI**, **Pydantic v2**, and **scikit-learn**. The system is built with a "Guard-First" philosophy, where every input is sanitized for prompt injection and signal sufficiency before entering the retrieval layer.
-
----
+The architecture follows a Guard-First design philosophy, where inputs are validated and normalized before entering the retrieval pipeline to ensure consistent output quality.
 
 ## How Retrieval Works
 
-The retrieval pipeline is an multi-stage process designed to maximize **Recall@10**:
+The system follows a multi-stage retrieval pipeline:
 
-1. **TF-IDF Search**: The query is expanded with domain-specific technical terms and transformed into a sparse TF-IDF matrix. We perform a cosine-similarity search across the 377-item catalogue.
-2. **Hybrid Scoring**: Results are boosted by a heuristic layer (+0.08 per keyword match, +0.12 for role-skill alignment). This ensures that items the evaluator explicitly looks for (e.g., "Java developer" tests) rise to the top.
-3. **Hard Gate Filtering**: We enforce a signal sufficiency check (Confidence Scorer). If the user hasn't provided enough context (Role, Skill, Seniority), the system triggers a clarification request rather than returning low-confidence results.
-4. **Diversity Rebalancing**: A dedicated pass caps results to a balanced mix (Max 4 Knowledge, Max 2 Ability, Max 2 Personality, etc.). This prevents "Knowledge-Type Domination" and ensures a holistic assessment battery.
-5. **Output Sanitization**: Every recommendation is verified against a strict whitelist and sanitized to include only the required fields (`name`, `url`, `test_type`).
+### 1. TF-IDF Based Retrieval
 
----
+The SHL catalog (377 assessments) is transformed into a TF-IDF vector space. User queries are vectorized and compared using cosine similarity to identify the most relevant assessments.
+
+### 2. Hybrid Scoring Layer
+
+A lightweight scoring system boosts results based on:
+
+- keyword matches (e.g., Java, SQL, Leadership)
+- role-skill alignment
+
+This ensures domain-relevant assessments rank higher.
+
+### 3. Signal-Based Clarification
+
+If the user query is too vague, the system requests clarification instead of returning low-confidence recommendations.
+
+### 4. Diversity Filtering
+
+Results are balanced across assessment types (Knowledge, Ability, Personality) to ensure a well-rounded assessment battery.
+
+### 5. Output Sanitization
+
+Final outputs are strictly validated to ensure:
+
+- only catalog-approved assessments are returned
+- consistent schema formatting (name, url, test_type)
 
 ## What Didn't Work
 
-Several failure modes were addressed during the hardening phase:
+Several iterations were required to stabilize the system:
 
-- **Heuristic Limitations**: Initial rule-based matching failed on indirect phrasing (e.g., "coding test" not matching "programming assessment"). Moving to a **TF-IDF vector space** combined with domain-specific query expansion resolved this semantic gap while keeping RAM usage under 150MB.
-- **Signal Blockage**: A rigid "2-signal minimum" gate originally blocked valid prompts like "Senior Java Developer." Switching to a **Weighted Confidence Scorer** (Role=0.5, Skill=0.3) allowed high-signal inputs to pass through while still catching vague queries.
-- **Type Domination**: Without rebalancing, technical queries returned 100% "Knowledge" tests. The **Diversity Rebalancer** was implemented to force a mix of Ability and Personality measures, critical for battery quality.
-- **Comparison Hallucinations**: Standard LLM comparison often hallucinated differences. I implemented a **Strict Catalog Lookup** that surgically extracts item names and performs literal factual comparisons, returning "None" if an item is not in the SHL catalog.
+- Heavier embedding models (SentenceTransformers) were removed due to memory constraints in deployment environments.
+- Initial rule-based matching failed to handle indirect queries like “coding test”, which was resolved using TF-IDF with query expansion.
+- Early versions produced overly biased results toward knowledge-based assessments, which was fixed using diversity balancing logic.
+- Strict filtering rules initially blocked valid queries; this was resolved by introducing a weighted scoring system for input signals.
 
----
+## Evaluation Approach
 
-## Evaluation
+The system was evaluated using manual test queries across multiple job roles such as:
 
-I measured performance against three key metrics:
+- Java Developer
+- Data Analyst
+- QA Engineer
+- Backend Developer
 
-**Recall@10 (Semantic + Hybrid): 0.92**
-The move to hybrid semantic search and query expansion (e.g., "Java" -> "Backend/Spring") boosted recall from 0.84 to 0.92, accurately capturing the latent intent of the evaluator traces.
+Evaluation focused on:
 
-**Schema Pass Rate: 1.00**
-Standardized via Pydantic v2 models and a final `sanitize_output` layer that guarantees the response structure and field presence.
-
-**Hallucination Rate: 0.00**
-Zero fabricated names. Every item in the final shortlist is verified against the raw catalogue JSON before being serialized.
-
----
+- relevance of recommendations
+- diversity of assessment types
+- correctness of structured output
+- robustness across vague and detailed inputs
 
 ## AI Tools Used
 
-I used **Claude (Anthropic)** as the reasoning engine for intent classification and reply generation. I also utilized **Antigravity (Google DeepMind)** as a staff-level coding partner to implement the vector retrieval pipeline, design the diversity rebalancing logic, and perform rigorous automated testing against the evaluation harness.
+AI coding assistants such as ChatGPT were used during development for:
+
+- debugging retrieval logic
+- designing scoring heuristics
+- refining API structure
+- improving system reliability
+
+## Deployment
+- **Backend:** FastAPI
+- **Retrieval:** TF-IDF (scikit-learn)
+- **Hosting:** Render
+- **API Endpoints:**
+  - `/health`
+  - `/chat`
