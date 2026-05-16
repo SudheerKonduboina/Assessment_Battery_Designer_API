@@ -9,6 +9,12 @@ app = FastAPI(title="SHL Recommender", version="8.5")
 async def startup_event():
     catalog_path = os.path.join(os.path.dirname(__file__), "data", "shl_product_catalogue.json")
     chat.agent = Agent(catalog_path)
+    
+    # Safely load the model in the background so uvicorn binds port quickly
+    import asyncio
+    from .core.ranker import get_model
+    asyncio.create_task(asyncio.to_thread(get_model))
+    
     print("=== SHL SYSTEM READY (v8.5) ===")
 
 # STRICT HEALTH CONTRACT (MANDATORY)

@@ -1,11 +1,24 @@
-from sentence_transformers import SentenceTransformer
 import numpy as np
 import os
+import threading
 
-# Set environment variable to avoid tokenizers parallelism warning
+# Set environment variables to avoid tokenizers parallelism warning and save memory
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+_model = None
+_model_lock = threading.Lock()
+
+def get_model():
+    global _model
+    if _model is None:
+        with _model_lock:
+            if _model is None:
+                from sentence_transformers import SentenceTransformer
+                _model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+    return _model
 
 _KEY_TYPE_MAP: dict[str, str] = {
     "Ability & Aptitude":             "A",
@@ -44,7 +57,7 @@ def derive_type(item: dict) -> str:
     return "K"
 
 def embed(text: str):
-    return model.encode(text)
+    return get_model().encode(text)
 
 def hybrid_score(item, query, embedding_score):
     text = (item["name"] + " " + item.get("description", "")).lower()
