@@ -14,7 +14,8 @@ requests>=2.31.0,<3.0.0
 python-dotenv>=1.0.0,<2.0.0
 
 # ── Internal Core ──────────────────────────────────────────────────────
+sentence-transformers>=2.2.2
+
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.2+cpu
-sentence-transformers>=2.0.0
+torch
 numpy>=1.20.0
