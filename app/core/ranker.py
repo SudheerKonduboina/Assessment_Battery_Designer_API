@@ -8,17 +8,15 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-_model = None
-_model_lock = threading.Lock()
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+_vectorizer = None
 
 def get_model():
-    global _model
-    if _model is None:
-        with _model_lock:
-            if _model is None:
-                from sentence_transformers import SentenceTransformer
-                _model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
-    return _model
+    global _vectorizer
+    if _vectorizer is None:
+        _vectorizer = TfidfVectorizer(stop_words="english")
+    return _vectorizer
 
 _KEY_TYPE_MAP: dict[str, str] = {
     "Ability & Aptitude":             "A",
@@ -56,8 +54,6 @@ def derive_type(item: dict) -> str:
                 
     return "K"
 
-def embed(text: str):
-    return get_model().encode(text)
 
 def hybrid_score(item, query, embedding_score):
     text = (item["name"] + " " + item.get("description", "")).lower()
@@ -85,17 +81,20 @@ def hybrid_score(item, query, embedding_score):
 
     return score + keyword_boost
 
+from sklearn.metrics.pairwise import cosine_similarity
+
 def retrieve(query: str, catalogue: list[dict], top_k=30):
-    q_emb = embed(query)
+    texts = [item["name"] + " " + item.get("description", "") for item in catalogue]
+
+    model = get_model()
+    embeddings = model.fit_transform(texts)
+    query_vec = model.transform([query])
+
+    scores = cosine_similarity(query_vec, embeddings)[0]
 
     scored = []
-    for item in catalogue:
-        text = item["name"] + " " + item.get("description", "")
-        i_emb = embed(text)
-
-        emb_score = np.dot(q_emb, i_emb) / (
-            np.linalg.norm(q_emb) * np.linalg.norm(i_emb)
-        )
+    for idx, item in enumerate(catalogue):
+        emb_score = float(scores[idx])
 
         final_score = hybrid_score(item, query, emb_score)
 
