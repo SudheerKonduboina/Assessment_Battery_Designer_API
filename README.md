@@ -12,8 +12,14 @@
   <img src="https://img.shields.io/badge/python-3.12-blue?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/Pydantic-v2-E92063?style=for-the-badge&logo=pydantic&logoColor=white" />
-  <img src="https://img.shields.io/badge/Architecture-Semantic--Hybrid-orange?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/scikit--learn-TF--IDF-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" />
+  <img src="https://img.shields.io/badge/Architecture-TF--IDF%20Hybrid-orange?style=for-the-badge" />
 </p>
+
+<p align="center">
+  <strong>Live Demo:</strong> <a href="https://assessment-battery-designer-api.onrender.com/docs">https://assessment-battery-designer-api.onrender.com/docs</a>
+</p>
+
 
 <p align="center">
   <img src="https://img.shields.io/badge/score-100%25%20compliance-brightgreen?style=flat-square" />
@@ -40,7 +46,7 @@ graph TD
     F -- Confidence >= 0.5 --> H[Retrieval Pipeline]
     
     H --> I[Query Expansion Layer]
-    I --> J[SentenceTransformer Embedding]
+    I --> J[TF-IDF Vectorization]
     J --> K[Hybrid Ranking Engine]
     
     K --> L[Cosine Similarity Search]
@@ -60,7 +66,7 @@ graph TD
 mindmap
   root((SHL Recommender))
     Intelligence Layer
-      SentenceTransformer (all-MiniLM-L6-v2)
+      TF-IDF Sparse Representation
       Semantic Query Expansion
       Hybrid Heuristic Scoring
     Security & Guardrails
@@ -85,8 +91,8 @@ mindmap
 <tr>
 <td width="50%">
 
-### 🧠 Semantic-Hybrid Retrieval
-- **Vector Search** — Latent similarity matching using SentenceTransformers.
+### 🧠 TF-IDF Hybrid Retrieval
+- **Sparse Vector Search** — Keyword-driven similarity matching using scikit-learn TF-IDF.
 - **Hybrid Scoring Engine** — Weighted boosts for keywords and role-skill alignment.
 - **Domain Expansion** — Automatic technical term augmentation (e.g., Java -> Spring/OOP).
 - **Battery Rebalancer** — Strict caps on test types (K, A, P, S, B) for holistic शॉर्टलिस्टs.
@@ -113,7 +119,7 @@ The API follows a purely functional, stateless design. Every request carries the
 1.  **Ingestion**: Loads 377 SHL Individual Test Solutions.
 2.  **Detection**: Extracts signals and calculates confidence.
 3.  **Expansion**: Augments query for high-recall matching.
-4.  **Retrieval**: Semantic vector search + Hybrid keyword scoring.
+4.  **Retrieval**: TF-IDF vector search + Hybrid keyword scoring.
 5.  **Refinement**: Enforces diversity caps and whitelisting.
 6.  **Sanitization**: Validates response structure before transmission.
 

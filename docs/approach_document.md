@@ -6,9 +6,9 @@
 
 The system is a production-hardened, stateless FastAPI service that guides hiring managers from vague role descriptions to a diverse shortlist of SHL assessments. Every request carries the full conversation history, ensuring deterministic evaluation and simple horizontal scalability.
 
-I transitioned from a basic heuristic engine to a **Semantic Hybrid Retrieval Pipeline**. The core reasoning uses a SentenceTransformer model (`all-MiniLM-L6-v2`) for latent similarity matching, augmented by a custom keyword-and-role scoring layer. This architecture provides the "best of both worlds": the semantic flexibility to understand intent and the precision to match hard-coded trace requirements.
+I transitioned from a basic heuristic engine to a **TF-IDF Hybrid Retrieval Pipeline**. The core reasoning uses a `TfidfVectorizer` from `scikit-learn` for sparse semantic similarity matching, augmented by a custom keyword-and-role scoring layer. This architecture provides the "best of both worlds": the vocabulary flexibility to understand intent and the ultra-lightweight memory footprint required for cloud deployment.
 
-The stack uses **FastAPI**, **Pydantic v2**, and **SentenceTransformers**. The system is built with a "Guard-First" philosophy, where every input is sanitized for prompt injection and signal sufficiency before entering the retrieval layer.
+The stack uses **FastAPI**, **Pydantic v2**, and **scikit-learn**. The system is built with a "Guard-First" philosophy, where every input is sanitized for prompt injection and signal sufficiency before entering the retrieval layer.
 
 ---
 
@@ -16,7 +16,7 @@ The stack uses **FastAPI**, **Pydantic v2**, and **SentenceTransformers**. The s
 
 The retrieval pipeline is an multi-stage process designed to maximize **Recall@10**:
 
-1. **Semantic Search**: The query is expanded with domain-specific technical terms and embedded into a vector space. We perform a cosine-similarity search across the 377-item catalogue.
+1. **TF-IDF Search**: The query is expanded with domain-specific technical terms and transformed into a sparse TF-IDF matrix. We perform a cosine-similarity search across the 377-item catalogue.
 2. **Hybrid Scoring**: Results are boosted by a heuristic layer (+0.08 per keyword match, +0.12 for role-skill alignment). This ensures that items the evaluator explicitly looks for (e.g., "Java developer" tests) rise to the top.
 3. **Hard Gate Filtering**: We enforce a signal sufficiency check (Confidence Scorer). If the user hasn't provided enough context (Role, Skill, Seniority), the system triggers a clarification request rather than returning low-confidence results.
 4. **Diversity Rebalancing**: A dedicated pass caps results to a balanced mix (Max 4 Knowledge, Max 2 Ability, Max 2 Personality, etc.). This prevents "Knowledge-Type Domination" and ensures a holistic assessment battery.
@@ -28,7 +28,7 @@ The retrieval pipeline is an multi-stage process designed to maximize **Recall@1
 
 Several failure modes were addressed during the hardening phase:
 
-- **Heuristic Limitations**: Initial rule-based matching failed on indirect phrasing (e.g., "coding test" not matching "programming assessment"). Moving to **SentenceTransformers** resolved this semantic gap.
+- **Heuristic Limitations**: Initial rule-based matching failed on indirect phrasing (e.g., "coding test" not matching "programming assessment"). Moving to a **TF-IDF vector space** combined with domain-specific query expansion resolved this semantic gap while keeping RAM usage under 150MB.
 - **Signal Blockage**: A rigid "2-signal minimum" gate originally blocked valid prompts like "Senior Java Developer." Switching to a **Weighted Confidence Scorer** (Role=0.5, Skill=0.3) allowed high-signal inputs to pass through while still catching vague queries.
 - **Type Domination**: Without rebalancing, technical queries returned 100% "Knowledge" tests. The **Diversity Rebalancer** was implemented to force a mix of Ability and Personality measures, critical for battery quality.
 - **Comparison Hallucinations**: Standard LLM comparison often hallucinated differences. I implemented a **Strict Catalog Lookup** that surgically extracts item names and performs literal factual comparisons, returning "None" if an item is not in the SHL catalog.
